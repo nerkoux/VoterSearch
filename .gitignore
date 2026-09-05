@@ -1,0 +1,20 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.kotlin/
+.agent/
+.DS_Store
+/build
+/app/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+*.aab
+
+# Voter list personal data & PDFs
+voter_list_master*
+*.xlsx
+list.pdf
