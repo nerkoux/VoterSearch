@@ -139,18 +139,16 @@ class ThermalSlipRenderer(private val context: Context) {
         }
 
         // Polling Station
-        if (!slipData.pollingStation.isNullOrBlank()) {
-            currentY += 4f
-            paintBold.textSize = 17f
-            canvas.drawText("Polling Station:", PADDING_X, currentY, paintBold)
+        currentY += 4f
+        paintBold.textSize = 17f
+        canvas.drawText("Polling Station:", PADDING_X, currentY, paintBold)
+        currentY += 22f
+        paintText.textSize = 17f
+        val psText = if (!slipData.pollingStation.isNullOrBlank()) slipData.pollingStation!! else "Not Available"
+        val wrapped = wrapText(psText, paintText, PRINTER_WIDTH_DOTS - (PADDING_X * 2))
+        for (line in wrapped) {
+            canvas.drawText(line, PADDING_X, currentY, paintText)
             currentY += 22f
-            paintText.textSize = 17f
-            // Wrap text if needed
-            val wrapped = wrapText(slipData.pollingStation, paintText, PRINTER_WIDTH_DOTS - (PADDING_X * 2))
-            for (line in wrapped) {
-                canvas.drawText(line, PADDING_X, currentY, paintText)
-                currentY += 22f
-            }
         }
 
         // Bottom Divider
@@ -229,7 +227,9 @@ class ThermalSlipRenderer(private val context: Context) {
         }
         if (!slipData.relativeName.isNullOrBlank()) height += 30
         if (!slipData.houseNumber.isNullOrBlank()) height += 30
-        if (!slipData.pollingStation.isNullOrBlank()) height += 60
+        val psText = if (!slipData.pollingStation.isNullOrBlank()) slipData.pollingStation!! else "Not Available"
+        val psLines = ((psText.length / 28) + 1).coerceAtLeast(1)
+        height += 24 + (psLines * 22)
         return height.coerceAtLeast(350)
     }
 

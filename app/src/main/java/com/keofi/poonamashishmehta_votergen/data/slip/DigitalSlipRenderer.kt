@@ -206,21 +206,21 @@ class DigitalSlipRenderer(private val context: Context) {
         }
 
         // Polling Station Card
-        if (!slipData.pollingStation.isNullOrBlank()) {
-            paintText.textSize = 30f
-            paintText.color = TEXT_SECONDARY
-            canvas.drawText("POLLING STATION", PADDING, currentY, paintText)
-            currentY += 40f
+        paintText.textSize = 30f
+        paintText.color = TEXT_SECONDARY
+        canvas.drawText("POLLING BOOTH / STATION", PADDING, currentY, paintText)
+        currentY += 40f
 
-            paintBold.textSize = 34f
-            paintBold.color = TEXT_PRIMARY
-            val wrapped = wrapText(slipData.pollingStation, paintBold, DIGITAL_WIDTH - (PADDING * 2))
-            for (line in wrapped) {
-                canvas.drawText(line, PADDING, currentY, paintBold)
-                currentY += 44f
-            }
-            currentY += 16f
+        paintBold.textSize = 34f
+        val hasStation = !slipData.pollingStation.isNullOrBlank()
+        val psText = if (hasStation) slipData.pollingStation!! else "Not Available"
+        paintBold.color = if (hasStation) TEXT_PRIMARY else TEXT_SECONDARY
+        val wrapped = wrapText(psText, paintBold, DIGITAL_WIDTH - (PADDING * 2))
+        for (line in wrapped) {
+            canvas.drawText(line, PADDING, currentY, paintBold)
+            currentY += 44f
         }
+        currentY += 16f
 
         // Footer Divider & Timestamp
         canvas.drawLine(PADDING, currentY, DIGITAL_WIDTH - PADDING, currentY, paintBorder)
@@ -341,7 +341,9 @@ class DigitalSlipRenderer(private val context: Context) {
         }
         if (!slipData.relativeName.isNullOrBlank()) height += 90
         if (!slipData.houseNumber.isNullOrBlank()) height += 90
-        if (!slipData.pollingStation.isNullOrBlank()) height += 130
+        val psText = if (!slipData.pollingStation.isNullOrBlank()) slipData.pollingStation!! else "Not Available"
+        val estimatedLines = ((psText.length / 32) + 1).coerceAtLeast(1)
+        height += 50 + (estimatedLines * 44)
         return height.coerceAtLeast(900)
     }
 

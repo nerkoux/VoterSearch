@@ -500,18 +500,19 @@ class SpreadsheetImportManager(
         val localBodyIdx: Int = 2,
         val wardNoIdx: Int = 3,
         val partNoIdx: Int = 4,
-        val sectionNameIdx: Int = 5,
-        val pageNoIdx: Int = 6,
-        val serialNoIdx: Int = 7,
-        val statusCodeIdx: Int = 8,
-        val epicNoIdx: Int = 9,
-        val voterNameIdx: Int = 10,
-        val relationTypeIdx: Int = 11,
-        val relativeNameIdx: Int = 12,
-        val houseNoIdx: Int = 13,
-        val ageIdx: Int = 14,
-        val genderIdx: Int = 15,
-        val statusIdx: Int = 16
+        val pollingStationIdx: Int = 5,
+        val sectionNameIdx: Int = 6,
+        val pageNoIdx: Int = 7,
+        val serialNoIdx: Int = 8,
+        val statusCodeIdx: Int = 9,
+        val epicNoIdx: Int = 10,
+        val voterNameIdx: Int = 11,
+        val relationTypeIdx: Int = 12,
+        val relativeNameIdx: Int = 13,
+        val houseNoIdx: Int = 14,
+        val ageIdx: Int = 15,
+        val genderIdx: Int = 16,
+        val statusIdx: Int = 17
     ) {
         fun toVoterEntity(row: List<String>, listId: Long, fallbackSource: String): VoterEntity {
             fun get(idx: Int): String = if (idx in row.indices) row[idx].trim() else ""
@@ -538,10 +539,8 @@ class SpreadsheetImportManager(
             )
             val address = if (addressParts.isNotEmpty()) addressParts.joinToString(", ") else null
 
-            val pollingStation = listOfNotNull(
-                constituency.ifBlank { null },
-                section.ifBlank { null }
-            ).joinToString(" - ").ifBlank { null }
+            val rawPollingStation = if (pollingStationIdx != -1) get(pollingStationIdx) else ""
+            val pollingStation = rawPollingStation.ifBlank { null }
 
             val cleanEpic = epic.uppercase().replace(Regex("[^A-Z0-9/]"), "")
             val normalizedEpic = cleanEpic.replace(Regex("[^A-Z0-9]"), "")
@@ -571,7 +570,30 @@ class SpreadsheetImportManager(
         }
 
         companion object {
-            val DEFAULT = ColumnMapping()
+            val DEFAULT_18 = ColumnMapping()
+
+            val DEFAULT_17 = ColumnMapping(
+                sourceFileIdx = 0,
+                constituencyIdx = 1,
+                localBodyIdx = 2,
+                wardNoIdx = 3,
+                partNoIdx = 4,
+                pollingStationIdx = -1,
+                sectionNameIdx = 5,
+                pageNoIdx = 6,
+                serialNoIdx = 7,
+                statusCodeIdx = 8,
+                epicNoIdx = 9,
+                voterNameIdx = 10,
+                relationTypeIdx = 11,
+                relativeNameIdx = 12,
+                houseNoIdx = 13,
+                ageIdx = 14,
+                genderIdx = 15,
+                statusIdx = 16
+            )
+
+            val DEFAULT = DEFAULT_18
 
             fun detect(headers: List<String>): ColumnMapping {
                 var sourceIdx = -1
@@ -579,6 +601,7 @@ class SpreadsheetImportManager(
                 var localBodyIdx = -1
                 var wardIdx = -1
                 var partIdx = -1
+                var pollingStationIdx = -1
                 var sectionIdx = -1
                 var pageIdx = -1
                 var serialIdx = -1
@@ -607,8 +630,9 @@ class SpreadsheetImportManager(
                         h.contains("serial") || (h.contains("क्रम") && !h.contains("पहचान")) || h.contains("sr") -> serialIdx = idx
                         h.contains("page") || h.contains("पृष्ठ") -> pageIdx = idx
                         h.contains("constituency") || h.contains("विधानसभा") -> constituencyIdx = idx
-                        h.contains("section") || h.contains("अनुभाग") || (h.contains("क्षेत्र") && !h.contains("विधानसभा")) -> sectionIdx = idx
-                        h.contains("part") || h.contains("booth") || (h.contains("भाग") && !h.contains("अनुभाग")) -> partIdx = idx
+                        h.contains("polling") || h.contains("मतदान केंद्र") || h.contains("मतदान स्थल") || (h.contains("booth") && !h.contains("part")) -> pollingStationIdx = idx
+                        h.contains("section") || h.contains("अनुभाग") || (h.contains("क्षेत्र") && !h.contains("विधानसभा") && !h.contains("मतदान")) -> sectionIdx = idx
+                        h.contains("part") || (h.contains("भाग") && !h.contains("अनुभाग")) -> partIdx = idx
                         h.contains("ward") || h.contains("वार्ड") -> wardIdx = idx
                         h.contains("local") || h.contains("निकाय") -> localBodyIdx = idx
                         h.contains("source") || h.contains("स्रोत") -> sourceIdx = idx
@@ -616,31 +640,35 @@ class SpreadsheetImportManager(
                     }
                 }
 
-                // If essential columns were found, return mapped indices with default fallbacks
+                val fallback = if (pollingStationIdx != -1 || headers.size >= 18) DEFAULT_18 else DEFAULT_17
+
+                // If essential columns were found, return mapped indices with fallback
                 return if (epicIdx != -1 || nameIdx != -1) {
                     ColumnMapping(
-                        sourceFileIdx = if (sourceIdx != -1) sourceIdx else DEFAULT.sourceFileIdx,
-                        constituencyIdx = if (constituencyIdx != -1) constituencyIdx else DEFAULT.constituencyIdx,
-                        localBodyIdx = if (localBodyIdx != -1) localBodyIdx else DEFAULT.localBodyIdx,
-                        wardNoIdx = if (wardIdx != -1) wardIdx else DEFAULT.wardNoIdx,
-                        partNoIdx = if (partIdx != -1) partIdx else DEFAULT.partNoIdx,
-                        sectionNameIdx = if (sectionIdx != -1) sectionIdx else DEFAULT.sectionNameIdx,
-                        pageNoIdx = if (pageIdx != -1) pageIdx else DEFAULT.pageNoIdx,
-                        serialNoIdx = if (serialIdx != -1) serialIdx else DEFAULT.serialNoIdx,
-                        statusCodeIdx = if (statusCodeIdx != -1) statusCodeIdx else DEFAULT.statusCodeIdx,
-                        epicNoIdx = if (epicIdx != -1) epicIdx else DEFAULT.epicNoIdx,
-                        voterNameIdx = if (nameIdx != -1) nameIdx else DEFAULT.voterNameIdx,
-                        relationTypeIdx = if (relTypeIdx != -1) relTypeIdx else DEFAULT.relationTypeIdx,
-                        relativeNameIdx = if (relNameIdx != -1) relNameIdx else DEFAULT.relativeNameIdx,
-                        houseNoIdx = if (houseIdx != -1) houseIdx else DEFAULT.houseNoIdx,
-                        ageIdx = if (ageIdx != -1) ageIdx else DEFAULT.ageIdx,
-                        genderIdx = if (genderIdx != -1) genderIdx else DEFAULT.genderIdx,
-                        statusIdx = if (statusIdx != -1) statusIdx else DEFAULT.statusIdx
+                        sourceFileIdx = if (sourceIdx != -1) sourceIdx else fallback.sourceFileIdx,
+                        constituencyIdx = if (constituencyIdx != -1) constituencyIdx else fallback.constituencyIdx,
+                        localBodyIdx = if (localBodyIdx != -1) localBodyIdx else fallback.localBodyIdx,
+                        wardNoIdx = if (wardIdx != -1) wardIdx else fallback.wardNoIdx,
+                        partNoIdx = if (partIdx != -1) partIdx else fallback.partNoIdx,
+                        pollingStationIdx = if (pollingStationIdx != -1) pollingStationIdx else fallback.pollingStationIdx,
+                        sectionNameIdx = if (sectionIdx != -1) sectionIdx else fallback.sectionNameIdx,
+                        pageNoIdx = if (pageIdx != -1) pageIdx else fallback.pageNoIdx,
+                        serialNoIdx = if (serialIdx != -1) serialIdx else fallback.serialNoIdx,
+                        statusCodeIdx = if (statusCodeIdx != -1) statusCodeIdx else fallback.statusCodeIdx,
+                        epicNoIdx = if (epicIdx != -1) epicIdx else fallback.epicNoIdx,
+                        voterNameIdx = if (nameIdx != -1) nameIdx else fallback.voterNameIdx,
+                        relationTypeIdx = if (relTypeIdx != -1) relTypeIdx else fallback.relationTypeIdx,
+                        relativeNameIdx = if (relNameIdx != -1) relNameIdx else fallback.relativeNameIdx,
+                        houseNoIdx = if (houseIdx != -1) houseIdx else fallback.houseNoIdx,
+                        ageIdx = if (ageIdx != -1) ageIdx else fallback.ageIdx,
+                        genderIdx = if (genderIdx != -1) genderIdx else fallback.genderIdx,
+                        statusIdx = if (statusIdx != -1) statusIdx else fallback.statusIdx
                     )
                 } else {
-                    DEFAULT
+                    fallback
                 }
             }
         }
     }
 }
+

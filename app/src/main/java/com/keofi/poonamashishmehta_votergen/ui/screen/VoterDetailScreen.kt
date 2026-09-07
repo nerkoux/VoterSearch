@@ -189,10 +189,11 @@ fun VoterDetailScreen(
                             }
                         }
 
-                        if (!v.pollingStation.isNullOrBlank()) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.8.dp, color = DividerGray)
-                            DetailItem(label = "POLLING STATION", value = v.pollingStation)
-                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.8.dp, color = DividerGray)
+                        DetailItem(
+                            label = "POLLING BOOTH / STATION",
+                            value = if (!v.pollingStation.isNullOrBlank()) v.pollingStation else "Not Available"
+                        )
 
                         // Source PDF / Page info
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.8.dp, color = DividerGray)

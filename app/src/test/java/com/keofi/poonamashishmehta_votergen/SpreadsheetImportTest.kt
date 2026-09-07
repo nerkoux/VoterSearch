@@ -91,6 +91,62 @@ pdf-1.pdf,53-आदर्श नगर,जयपुर,123,1,सैक्टर 
     }
 
     @Test
+    fun testCsvParserWith18ColumnsAndPollingStation() {
+        val csvData = """
+"स्रोत फ़ाइल
+(Source_File)","विधानसभा क्षेत्र
+(Constituency)","नगर निकाय
+(Local_Body)","वार्ड नं.
+(Ward_No)","भाग संख्या
+(Part_Booth_No)","मतदान केंद्र एवं पता
+(Polling_Station)","अनुभाग / क्षेत्र
+(Section_Name)","पृष्ठ संख्या
+(Page_No)","क्रम संख्या
+(Serial_No)","स्थिति कोड
+(Status_Code)","पहचान पत्र क्रमांक
+(EPIC_No)","मतदाता का नाम
+(Voter_Name)","संबंध
+(Relation_Type)","संबंधी का नाम
+(Relative_Name)","मकान संख्या
+(House_No)","आयु
+(Age)","लिंग
+(Gender)","स्थिति
+(Status)"
+ward_122.pdf,53-आदर्श नगर,जयपुर,122,1,1770 - उच्च माध्यमिक आदर्श विद्या मन्दिर दशहरा मैदान के सामने आदर्श नगर कमरा नं. 5,सैक्टर नं. 1 आदर्श नगर,3,1,,WUX1892702,अदिति जेसवानी,पिता,नरेंद्र जेसवानी,1ए,22,स्त्री,Active
+ward_123.pdf,53-आदर्श नगर,जयपुर,123,1,,सैक्टर नं. 2क जवाहर नगर,3,1,S,WUX1708742,पुनीत गुप्ता,पिता,राजेंद्र गुप्ता,2-62,42,पुरुष,Active
+        """.trimIndent()
+
+        val parsedRows = mutableListOf<List<String>>()
+        val reader = BufferedReader(StringReader(csvData))
+        SpreadsheetImportManager.parseCsv(reader) { _, row ->
+            parsedRows.add(row)
+        }
+
+        assertEquals(3, parsedRows.size)
+        val header = parsedRows[0]
+        assertEquals(18, header.size)
+
+        val mapping = SpreadsheetImportManager.ColumnMapping.detect(header)
+        assertEquals(4, mapping.partNoIdx)
+        assertEquals(5, mapping.pollingStationIdx)
+        assertEquals(6, mapping.sectionNameIdx)
+        assertEquals(10, mapping.epicNoIdx)
+        assertEquals(11, mapping.voterNameIdx)
+
+        // Voter 1: Has Polling Station populated
+        val voter1 = mapping.toVoterEntity(parsedRows[1], listId = 101L, fallbackSource = "ward_122.csv")
+        assertEquals("WUX1892702", voter1.epicNumber)
+        assertEquals("अदिति जेसवानी", voter1.name)
+        assertEquals("1770 - उच्च माध्यमिक आदर्श विद्या मन्दिर दशहरा मैदान के सामने आदर्श नगर कमरा नं. 5", voter1.pollingStation)
+
+        // Voter 2: Polling Station column is empty string "" -> must be null in entity (displayed as Not Available)
+        val voter2 = mapping.toVoterEntity(parsedRows[2], listId = 102L, fallbackSource = "ward_123.csv")
+        assertEquals("WUX1708742", voter2.epicNumber)
+        assertEquals("पुनीत गुप्ता", voter2.name)
+        org.junit.Assert.assertNull(voter2.pollingStation)
+    }
+
+    @Test
     fun testCsvParserHandlesUtf8Bom() {
         val bomData = "\uFEFFColA,ColB\nValA,ValB"
         val parsedRows = mutableListOf<List<String>>()
