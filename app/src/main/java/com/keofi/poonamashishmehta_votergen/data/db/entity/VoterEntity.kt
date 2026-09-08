@@ -13,7 +13,9 @@ import androidx.room.PrimaryKey
         Index(value = ["normalizedName"]),
         Index(value = ["serialNumber"]),
         Index(value = ["partNumber"]),
-        Index(value = ["voterListId"])
+        Index(value = ["voterListId"]),
+        Index(value = ["relativeName"]),
+        Index(value = ["pollingStation"])
     ]
 )
 data class VoterEntity(

@@ -361,7 +361,7 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Voter Search & Slip Generator", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = PrimaryText)
-                Text("Version 1.0 (Native Kotlin • On-Device OCR • ESC/POS)", style = MaterialTheme.typography.bodySmall, color = SecondaryText)
+                Text("Version 1.1 (Native Kotlin • On-Device OCR • ESC/POS)", style = MaterialTheme.typography.bodySmall, color = SecondaryText)
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.8.dp, color = DividerGray)
 

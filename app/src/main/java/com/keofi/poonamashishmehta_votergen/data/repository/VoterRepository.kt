@@ -32,6 +32,60 @@ class VoterRepository(private val voterDao: VoterDao) {
         )
     }
 
+    fun searchVotersAdvanced(
+        voterQuery: String = "",
+        relativeQuery: String = "",
+        booth: String = "",
+        limit: Int = 150
+    ): Flow<List<VoterEntity>> {
+        val trimmedVoter = voterQuery.trim()
+        val trimmedRelative = relativeQuery.trim()
+        val trimmedBooth = booth.trim()
+
+        if (trimmedVoter.isEmpty() && trimmedRelative.isEmpty() && trimmedBooth.isEmpty()) {
+            return flowOf(emptyList())
+        }
+
+        val normalizedVoter = if (trimmedVoter.isNotEmpty()) TextNormalizer.normalize(trimmedVoter) else ""
+        val decodedVoter = if (trimmedVoter.isNotEmpty()) {
+            val dec = com.keofi.poonamashishmehta_votergen.util.RajasthanSecDecoder.decodeHindi(trimmedVoter)
+            if (dec != trimmedVoter) dec else ""
+        } else ""
+        val transliteratedVoter = if (trimmedVoter.isNotEmpty() && trimmedVoter.any { it in 'a'..'z' || it in 'A'..'Z' }) {
+            com.keofi.poonamashishmehta_votergen.util.HindiTransliterationUtil.latinToDevanagari(trimmedVoter).firstOrNull() ?: ""
+        } else ""
+
+        val decodedRelative = if (trimmedRelative.isNotEmpty()) {
+            val dec = com.keofi.poonamashishmehta_votergen.util.RajasthanSecDecoder.decodeHindi(trimmedRelative)
+            if (dec != trimmedRelative) dec else ""
+        } else ""
+        val transliteratedRelative = if (trimmedRelative.isNotEmpty() && trimmedRelative.any { it in 'a'..'z' || it in 'A'..'Z' }) {
+            com.keofi.poonamashishmehta_votergen.util.HindiTransliterationUtil.latinToDevanagari(trimmedRelative).firstOrNull() ?: ""
+        } else ""
+
+        return voterDao.searchVotersAdvanced(
+            rawVoterQuery = trimmedVoter,
+            normalizedVoterQuery = normalizedVoter,
+            decodedVoterQuery = decodedVoter,
+            transliteratedVoterQuery = transliteratedVoter,
+            rawRelativeQuery = trimmedRelative,
+            decodedRelativeQuery = decodedRelative,
+            transliteratedRelativeQuery = transliteratedRelative,
+            booth = trimmedBooth,
+            limit = limit
+        )
+    }
+
+    fun getAllBooths(): Flow<List<String>> = voterDao.getAllBooths()
+
+    fun getBoothsForList(listId: Long): Flow<List<String>> = voterDao.getBoothsForList(listId)
+
+    fun getVotersByBooth(pollingStation: String, limit: Int = 100, offset: Int = 0): Flow<List<VoterEntity>> =
+        voterDao.getVotersByBooth(pollingStation, limit, offset)
+
+    fun getVotersByBoothInList(listId: Long, pollingStation: String, limit: Int = 100, offset: Int = 0): Flow<List<VoterEntity>> =
+        voterDao.getVotersByBoothInList(listId, pollingStation, limit, offset)
+
     fun getVoterById(id: Long): Flow<VoterEntity?> = voterDao.getById(id)
 
     suspend fun getVoterByIdSync(id: Long): VoterEntity? = voterDao.getByIdSync(id)
@@ -50,6 +104,8 @@ class VoterRepository(private val voterDao: VoterDao) {
     fun getTotalVoterCount(): Flow<Int> = voterDao.getTotalVoterCount()
 
     suspend fun insertVoters(voters: List<VoterEntity>): List<Long> = voterDao.insertAll(voters)
+
+    fun insertVotersSync(voters: List<VoterEntity>): List<Long> = voterDao.insertAllSync(voters)
 
     suspend fun insertVoter(voter: VoterEntity): Long = voterDao.insert(voter)
 

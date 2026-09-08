@@ -11,13 +11,16 @@ import com.keofi.poonamashishmehta_votergen.data.db.entity.ImportJobEntity
 import com.keofi.poonamashishmehta_votergen.data.db.entity.VoterEntity
 import com.keofi.poonamashishmehta_votergen.data.db.entity.VoterListEntity
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 @Database(
     entities = [
         VoterEntity::class,
         VoterListEntity::class,
         ImportJobEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +32,13 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_voters_relativeName` ON `voters` (`relativeName`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_voters_pollingStation` ON `voters` (`pollingStation`)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -36,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "voter_search_database.db"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .fallbackToDestructiveMigration(false)
                     .build()
                     .also { INSTANCE = it }

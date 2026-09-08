@@ -141,11 +141,10 @@ class SpreadsheetImportManager(
                     batchVoters.add(voter)
                 }
 
-                if (batchVoters.size >= 500) {
-                    kotlinx.coroutines.runBlocking {
-                        voterRepository.insertVoters(batchVoters)
-                    }
+                if (batchVoters.size >= 250) {
+                    voterRepository.insertVotersSync(batchVoters)
                     batchVoters.clear()
+                    Thread.yield()
 
                     val progress = if (estimatedTotal > 0) {
                         (totalVotersCount.toFloat() / estimatedTotal.toFloat()).coerceIn(0f, 1f)
@@ -199,7 +198,7 @@ class SpreadsheetImportManager(
             }
 
             if (batchVoters.isNotEmpty()) {
-                voterRepository.insertVoters(batchVoters)
+                voterRepository.insertVotersSync(batchVoters)
                 batchVoters.clear()
             }
 
@@ -374,6 +373,8 @@ class SpreadsheetImportManager(
             val factory = SAXParserFactory.newInstance()
             factory.isNamespaceAware = false
             val parser = factory.newSAXParser()
+            val stringDeduplicator = HashMap<String, String>(4096)
+
             val handler = object : DefaultHandler() {
                 val currentString = StringBuilder()
                 var insideSi = false
@@ -399,11 +400,14 @@ class SpreadsheetImportManager(
                         insideT = false
                     } else if (qName.equals("si", ignoreCase = true)) {
                         insideSi = false
-                        result.add(currentString.toString())
+                        val raw = currentString.toString()
+                        val canonical = stringDeduplicator.getOrPut(raw) { raw }
+                        result.add(canonical)
                     }
                 }
             }
             parser.parse(inputStream, handler)
+            stringDeduplicator.clear()
         }
 
         fun parseXlsxSheet(
@@ -417,7 +421,8 @@ class SpreadsheetImportManager(
 
             val handler = object : DefaultHandler() {
                 var rowIndex = 0
-                val rowCells = mutableMapOf<Int, String>()
+                val rowCells = Array(40) { "" }
+                var maxCol = -1
                 var currentCellIndex = -1
                 var cellType: String? = null
                 val cellValue = StringBuilder()
@@ -426,7 +431,10 @@ class SpreadsheetImportManager(
 
                 override fun startElement(uri: String?, localName: String?, qName: String, attributes: Attributes) {
                     if (qName.equals("row", ignoreCase = true)) {
-                        rowCells.clear()
+                        for (i in 0..maxCol.coerceAtMost(39)) {
+                            rowCells[i] = ""
+                        }
+                        maxCol = -1
                     } else if (qName.equals("c", ignoreCase = true)) {
                         val cellRef = attributes.getValue("r") ?: ""
                         currentCellIndex = colRefToIndex(cellRef)
@@ -451,7 +459,7 @@ class SpreadsheetImportManager(
                     } else if (qName.equals("t", ignoreCase = true)) {
                         insideT = false
                     } else if (qName.equals("c", ignoreCase = true)) {
-                        if (currentCellIndex >= 0) {
+                        if (currentCellIndex in 0 until 40) {
                             val str = when (cellType) {
                                 "s" -> {
                                     val sstIdx = cellValue.toString().toIntOrNull()
@@ -462,13 +470,18 @@ class SpreadsheetImportManager(
                                 else -> cellValue.toString()
                             }
                             rowCells[currentCellIndex] = str
+                            if (currentCellIndex > maxCol) {
+                                maxCol = currentCellIndex
+                            }
                         }
                         currentCellIndex = -1
                         cellType = null
                     } else if (qName.equals("row", ignoreCase = true)) {
-                        if (rowCells.isNotEmpty()) {
-                            val maxCol = rowCells.keys.maxOrNull() ?: 0
-                            val rowList = (0..maxCol).map { col -> rowCells[col] ?: "" }
+                        if (maxCol >= 0) {
+                            val rowList = ArrayList<String>(maxCol + 1)
+                            for (i in 0..maxCol) {
+                                rowList.add(rowCells[i])
+                            }
                             if (rowList.any { it.isNotBlank() }) {
                                 onRow(rowIndex++, rowList)
                             }

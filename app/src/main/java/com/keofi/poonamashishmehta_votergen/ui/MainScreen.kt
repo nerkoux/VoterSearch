@@ -41,6 +41,7 @@ import com.keofi.poonamashishmehta_votergen.ui.screen.SearchScreen
 import com.keofi.poonamashishmehta_votergen.ui.screen.SettingsScreen
 import com.keofi.poonamashishmehta_votergen.ui.screen.SlipPreviewScreen
 import com.keofi.poonamashishmehta_votergen.ui.screen.VoterDetailScreen
+import com.keofi.poonamashishmehta_votergen.ui.screen.WelcomeScreen
 import com.keofi.poonamashishmehta_votergen.ui.theme.DarkNavy
 import com.keofi.poonamashishmehta_votergen.ui.theme.DividerGray
 import com.keofi.poonamashishmehta_votergen.ui.theme.LightSurface
@@ -52,6 +53,7 @@ sealed interface TopLevelRoute {
     val label: String
 }
 
+data object WelcomeRoute
 data object HomeRoute : TopLevelRoute {
     override val icon = Icons.Default.Home
     override val label = "Home"
@@ -85,14 +87,15 @@ private val TOP_LEVEL_ROUTES: List<TopLevelRoute> = listOf(
 
 @Composable
 fun MainScreen() {
-    val topLevelBackStack = remember { TopLevelBackStack<Any>(HomeRoute) }
+    val topLevelBackStack = remember { TopLevelBackStack<Any>(WelcomeRoute) }
 
     Scaffold(
         bottomBar = {
             val currentKey = topLevelBackStack.topLevelKey
             val isRootScreen = topLevelBackStack.isCurrentAtRoot()
+            val isWelcome = currentKey is WelcomeRoute
 
-            if (isRootScreen) {
+            if (isRootScreen && !isWelcome) {
                 Column {
                     HorizontalDivider(thickness = 0.8.dp, color = DividerGray)
                     NavigationBar(
@@ -134,6 +137,13 @@ fun MainScreen() {
                 .padding(innerPadding)
                 .background(Color.White),
             entryProvider = entryProvider {
+                entry<WelcomeRoute> {
+                    WelcomeScreen(
+                        onNext = {
+                            topLevelBackStack.replaceStartupWith(HomeRoute)
+                        }
+                    )
+                }
                 entry<HomeRoute> {
                     HomeScreen(
                         onNavigateToSearch = { topLevelBackStack.addTopLevel(SearchRoute) },
@@ -229,6 +239,13 @@ class TopLevelBackStack<T : Any>(startKey: T) {
                 }
             }
         }
+        topLevelKey = key
+        updateBackStack()
+    }
+
+    fun replaceStartupWith(key: T) {
+        topLevelStacks.clear()
+        topLevelStacks[key] = mutableStateListOf(key)
         topLevelKey = key
         updateBackStack()
     }

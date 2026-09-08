@@ -55,6 +55,72 @@ interface VoterDao {
         limit: Int = 100
     ): Flow<List<VoterEntity>>
 
+    @Query(
+        """
+        SELECT * FROM voters
+        WHERE (:booth = '' OR pollingStation = :booth OR partNumber = :booth)
+          AND (
+              :rawVoterQuery = ''
+              OR normalizedEpic LIKE :normalizedVoterQuery || '%'
+              OR normalizedName LIKE '%' || :normalizedVoterQuery || '%'
+              OR epicNumber LIKE '%' || :rawVoterQuery || '%'
+              OR name LIKE '%' || :rawVoterQuery || '%'
+              OR nameHindi LIKE '%' || :rawVoterQuery || '%'
+              OR (:decodedVoterQuery != '' AND (
+                  name LIKE '%' || :decodedVoterQuery || '%'
+                  OR nameHindi LIKE '%' || :decodedVoterQuery || '%'
+                  OR normalizedName LIKE '%' || :decodedVoterQuery || '%'
+              ))
+              OR (:transliteratedVoterQuery != '' AND (
+                  name LIKE '%' || :transliteratedVoterQuery || '%'
+                  OR nameHindi LIKE '%' || :transliteratedVoterQuery || '%'
+                  OR normalizedName LIKE '%' || :transliteratedVoterQuery || '%'
+              ))
+              OR CAST(serialNumber AS TEXT) = :rawVoterQuery
+          )
+          AND (
+              :rawRelativeQuery = ''
+              OR relativeName LIKE '%' || :rawRelativeQuery || '%'
+              OR (:decodedRelativeQuery != '' AND relativeName LIKE '%' || :decodedRelativeQuery || '%')
+              OR (:transliteratedRelativeQuery != '' AND relativeName LIKE '%' || :transliteratedRelativeQuery || '%')
+          )
+        ORDER BY 
+            CASE 
+                WHEN :rawVoterQuery != '' AND normalizedEpic = :normalizedVoterQuery THEN 1
+                WHEN :rawVoterQuery != '' AND normalizedEpic LIKE :normalizedVoterQuery || '%' THEN 2
+                WHEN :rawVoterQuery != '' AND (name = :rawVoterQuery OR nameHindi = :rawVoterQuery) THEN 3
+                WHEN :rawVoterQuery != '' AND (name LIKE :rawVoterQuery || '%' OR nameHindi LIKE :rawVoterQuery || '%') THEN 4
+                WHEN :rawVoterQuery != '' AND normalizedName LIKE :normalizedVoterQuery || '%' THEN 5
+                ELSE 6
+            END,
+            serialNumber ASC
+        LIMIT :limit
+        """
+    )
+    fun searchVotersAdvanced(
+        rawVoterQuery: String = "",
+        normalizedVoterQuery: String = "",
+        decodedVoterQuery: String = "",
+        transliteratedVoterQuery: String = "",
+        rawRelativeQuery: String = "",
+        decodedRelativeQuery: String = "",
+        transliteratedRelativeQuery: String = "",
+        booth: String = "",
+        limit: Int = 150
+    ): Flow<List<VoterEntity>>
+
+    @Query("SELECT DISTINCT pollingStation FROM voters WHERE pollingStation IS NOT NULL AND pollingStation != '' ORDER BY pollingStation ASC")
+    fun getAllBooths(): Flow<List<String>>
+
+    @Query("SELECT DISTINCT pollingStation FROM voters WHERE voterListId = :listId AND pollingStation IS NOT NULL AND pollingStation != '' ORDER BY pollingStation ASC")
+    fun getBoothsForList(listId: Long): Flow<List<String>>
+
+    @Query("SELECT * FROM voters WHERE pollingStation = :pollingStation ORDER BY serialNumber ASC LIMIT :limit OFFSET :offset")
+    fun getVotersByBooth(pollingStation: String, limit: Int = 100, offset: Int = 0): Flow<List<VoterEntity>>
+
+    @Query("SELECT * FROM voters WHERE voterListId = :listId AND pollingStation = :pollingStation ORDER BY serialNumber ASC LIMIT :limit OFFSET :offset")
+    fun getVotersByBoothInList(listId: Long, pollingStation: String, limit: Int = 100, offset: Int = 0): Flow<List<VoterEntity>>
+
     @Query("SELECT * FROM voters WHERE normalizedEpic = :normalizedEpic LIMIT 10")
     fun findByEpic(normalizedEpic: String): Flow<List<VoterEntity>>
 
@@ -81,6 +147,9 @@ interface VoterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(voters: List<VoterEntity>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAllSync(voters: List<VoterEntity>): List<Long>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(voter: VoterEntity): Long

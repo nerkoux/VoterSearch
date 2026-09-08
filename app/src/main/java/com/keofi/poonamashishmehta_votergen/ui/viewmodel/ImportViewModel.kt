@@ -36,6 +36,10 @@ class ImportViewModel : ViewModel() {
     private val _inspectError = MutableStateFlow<String?>(null)
     val inspectError: StateFlow<String?> = _inspectError.asStateFlow()
 
+    private val _isImportStarting = MutableStateFlow(false)
+    val isImportStarting: StateFlow<Boolean> = _isImportStarting.asStateFlow()
+
+    private var lastImportClickTime = 0L
     private var importJob: Job? = null
 
     init {
@@ -45,12 +49,18 @@ class ImportViewModel : ViewModel() {
                 if (_selectedFile.value?.isSpreadsheet == false || state !is ImportState.Idle) {
                     _importState.value = state
                 }
+                if (state !is ImportState.Idle && state !is ImportState.Processing) {
+                    _isImportStarting.value = false
+                }
             }
         }
         viewModelScope.launch {
             spreadsheetManager.importState.collect { state ->
                 if (_selectedFile.value?.isSpreadsheet == true || state !is ImportState.Idle) {
                     _importState.value = state
+                }
+                if (state !is ImportState.Idle && state !is ImportState.Processing) {
+                    _isImportStarting.value = false
                 }
             }
         }
@@ -83,18 +93,36 @@ class ImportViewModel : ViewModel() {
     }
 
     fun startImport(customName: String? = null) {
+        val now = System.currentTimeMillis()
+        if (now - lastImportClickTime < 1500L) {
+            // Drop rapid consecutive clicks to prevent duplicate list creation
+            return
+        }
+        lastImportClickTime = now
+
+        if (_isImportStarting.value || _importState.value is ImportState.Processing) {
+            return
+        }
+
         val file = _selectedFile.value ?: return
+        _isImportStarting.value = true
+
         importJob?.cancel()
         importJob = viewModelScope.launch {
-            if (file.isSpreadsheet) {
-                spreadsheetManager.importSpreadsheet(file.uri, customName)
-            } else {
-                pdfManager.importPdf(file.uri, customName)
+            try {
+                if (file.isSpreadsheet) {
+                    spreadsheetManager.importSpreadsheet(file.uri, customName)
+                } else {
+                    pdfManager.importPdf(file.uri, customName)
+                }
+            } finally {
+                _isImportStarting.value = false
             }
         }
     }
 
     fun cancelImport() {
+        _isImportStarting.value = false
         importJob?.cancel()
         pdfManager.resetState()
         spreadsheetManager.resetState()
@@ -102,6 +130,7 @@ class ImportViewModel : ViewModel() {
     }
 
     fun reset() {
+        _isImportStarting.value = false
         _selectedFile.value = null
         _inspectError.value = null
         pdfManager.resetState()

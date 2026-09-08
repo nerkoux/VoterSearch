@@ -3,6 +3,7 @@ package com.keofi.poonamashishmehta_votergen.ui.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -67,6 +70,8 @@ fun ListDetailScreen(
     val selectedList by viewModel.selectedList.collectAsState()
     val listVoters by viewModel.listVoters.collectAsState()
     val reviewVoters by viewModel.reviewVoters.collectAsState()
+    val selectedBooth by viewModel.selectedBooth.collectAsState()
+    val listBooths by viewModel.listBooths.collectAsState()
 
     LaunchedEffect(listId) {
         viewModel.selectList(listId)
@@ -215,12 +220,92 @@ fun ListDetailScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text(
-                            text = "Voters in this List",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryText
-                        )
+                        // Booth Filter Chips if list has booths
+                        if (listBooths.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(18.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Booth:",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = SecondaryText
+                                )
+
+                                val isAllSelected = selectedBooth == null
+                                Surface(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable { viewModel.selectBooth(null) },
+                                    color = if (isAllSelected) SaffronOrange.copy(alpha = 0.12f) else LightSurface,
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isAllSelected) SaffronOrange else DividerGray
+                                    )
+                                ) {
+                                    Text(
+                                        text = "All Booths",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal
+                                        ),
+                                        color = if (isAllSelected) SaffronOrange else PrimaryText,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+
+                                listBooths.forEach { booth ->
+                                    val isSelected = selectedBooth == booth
+                                    Surface(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .clickable { viewModel.selectBooth(booth) },
+                                        color = if (isSelected) SaffronOrange.copy(alpha = 0.12f) else LightSurface,
+                                        shape = RoundedCornerShape(16.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isSelected) SaffronOrange else DividerGray
+                                        )
+                                    ) {
+                                        Text(
+                                            text = booth,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            ),
+                                            color = if (isSelected) SaffronOrange else PrimaryText,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (selectedBooth != null) "Voters in $selectedBooth" else "Voters in this List",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PrimaryText,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${listVoters.size} shown",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SecondaryText
+                            )
+                        }
                     }
                 }
 

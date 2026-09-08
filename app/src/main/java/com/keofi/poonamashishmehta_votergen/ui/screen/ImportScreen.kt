@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -79,6 +80,7 @@ fun ImportScreen(
     val importState by viewModel.importState.collectAsState()
     val selectedFile by viewModel.selectedFile.collectAsState()
     val inspectError by viewModel.inspectError.collectAsState()
+    val isImportStarting by viewModel.isImportStarting.collectAsState()
 
     var customName by remember { mutableStateOf("") }
     var showPdfWarningDialog by remember { mutableStateOf(false) }
@@ -456,21 +458,38 @@ fun ImportScreen(
 
                                 Spacer(modifier = Modifier.height(18.dp))
 
+                                val isStarting = isImportStarting || importState is ImportState.Processing
                                 Button(
                                     onClick = { viewModel.startImport(customName.ifBlank { null }) },
+                                    enabled = !isStarting,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(50.dp),
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = SaffronOrange,
-                                        contentColor = Color.White
+                                        contentColor = Color.White,
+                                        disabledContainerColor = SaffronOrange.copy(alpha = 0.6f),
+                                        disabledContentColor = Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = "Import List",
-                                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
-                                    )
+                                    if (isStarting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "Starting Import...",
+                                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Import List",
+                                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
+                                        )
+                                    }
                                 }
                             }
                         }

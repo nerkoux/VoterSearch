@@ -29,16 +29,53 @@ class ListsViewModel : ViewModel() {
     private val _reviewVoters = MutableStateFlow<List<VoterEntity>>(emptyList())
     val reviewVoters: StateFlow<List<VoterEntity>> = _reviewVoters.asStateFlow()
 
+    private val _selectedBooth = MutableStateFlow<String?>(null)
+    val selectedBooth: StateFlow<String?> = _selectedBooth.asStateFlow()
+
+    private val _listBooths = MutableStateFlow<List<String>>(emptyList())
+    val listBooths: StateFlow<List<String>> = _listBooths.asStateFlow()
+
+    private var currentListId: Long = 0
+    private var votersJob: kotlinx.coroutines.Job? = null
+
     fun selectList(listId: Long) {
+        currentListId = listId
+        _selectedBooth.value = null
         viewModelScope.launch {
             _selectedList.value = listRepo.getListByIdSync(listId)
-            voterRepo.getVotersByList(listId, limit = 200).collect {
-                _listVoters.value = it
+        }
+        loadVotersForList(listId, null)
+        viewModelScope.launch {
+            voterRepo.getBoothsForList(listId).collect {
+                _listBooths.value = it
             }
         }
         viewModelScope.launch {
             voterRepo.getVotersNeedingReview(listId).collect {
                 _reviewVoters.value = it
+            }
+        }
+    }
+
+    fun selectBooth(booth: String?) {
+        val newBooth = if (_selectedBooth.value == booth) null else booth
+        _selectedBooth.value = newBooth
+        if (currentListId > 0) {
+            loadVotersForList(currentListId, newBooth)
+        }
+    }
+
+    private fun loadVotersForList(listId: Long, booth: String?) {
+        votersJob?.cancel()
+        votersJob = viewModelScope.launch {
+            if (booth.isNullOrBlank()) {
+                voterRepo.getVotersByList(listId, limit = 200).collect {
+                    _listVoters.value = it
+                }
+            } else {
+                voterRepo.getVotersByBoothInList(listId, booth, limit = 200).collect {
+                    _listVoters.value = it
+                }
             }
         }
     }
