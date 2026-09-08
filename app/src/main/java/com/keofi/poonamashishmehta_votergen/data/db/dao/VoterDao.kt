@@ -20,17 +20,25 @@ interface VoterDao {
            OR nameHindi LIKE '%' || :rawQuery || '%'
            OR relativeName LIKE '%' || :rawQuery || '%'
            OR houseNumber LIKE '%' || :rawQuery || '%'
+           OR address LIKE '%' || :rawQuery || '%'
+           OR pollingStation LIKE '%' || :rawQuery || '%'
            OR (:decodedQuery != '' AND (
                name LIKE '%' || :decodedQuery || '%'
                OR nameHindi LIKE '%' || :decodedQuery || '%'
                OR relativeName LIKE '%' || :decodedQuery || '%'
                OR normalizedName LIKE '%' || :decodedQuery || '%'
+               OR houseNumber LIKE '%' || :decodedQuery || '%'
+               OR address LIKE '%' || :decodedQuery || '%'
+               OR pollingStation LIKE '%' || :decodedQuery || '%'
            ))
            OR (:transliteratedQuery != '' AND (
                name LIKE '%' || :transliteratedQuery || '%'
                OR nameHindi LIKE '%' || :transliteratedQuery || '%'
                OR relativeName LIKE '%' || :transliteratedQuery || '%'
                OR normalizedName LIKE '%' || :transliteratedQuery || '%'
+               OR houseNumber LIKE '%' || :transliteratedQuery || '%'
+               OR address LIKE '%' || :transliteratedQuery || '%'
+               OR pollingStation LIKE '%' || :transliteratedQuery || '%'
            ))
            OR CAST(serialNumber AS TEXT) = :rawQuery
         ORDER BY 
@@ -41,7 +49,9 @@ interface VoterDao {
                 WHEN name LIKE :rawQuery || '%' OR nameHindi LIKE :rawQuery || '%' THEN 4
                 WHEN normalizedName LIKE :normalizedQuery || '%' THEN 5
                 WHEN :transliteratedQuery != '' AND (name LIKE :transliteratedQuery || '%' OR nameHindi LIKE :transliteratedQuery || '%') THEN 6
-                ELSE 7
+                WHEN houseNumber = :rawQuery OR houseNumber LIKE :rawQuery || '%' THEN 7
+                WHEN address LIKE '%' || :rawQuery || '%' THEN 8
+                ELSE 9
             END,
             serialNumber ASC
         LIMIT :limit
@@ -66,17 +76,56 @@ interface VoterDao {
               OR epicNumber LIKE '%' || :rawVoterQuery || '%'
               OR name LIKE '%' || :rawVoterQuery || '%'
               OR nameHindi LIKE '%' || :rawVoterQuery || '%'
+              OR houseNumber LIKE '%' || :rawVoterQuery || '%'
+              OR address LIKE '%' || :rawVoterQuery || '%'
+              OR pollingStation LIKE '%' || :rawVoterQuery || '%'
               OR (:decodedVoterQuery != '' AND (
                   name LIKE '%' || :decodedVoterQuery || '%'
                   OR nameHindi LIKE '%' || :decodedVoterQuery || '%'
                   OR normalizedName LIKE '%' || :decodedVoterQuery || '%'
+                  OR houseNumber LIKE '%' || :decodedVoterQuery || '%'
+                  OR address LIKE '%' || :decodedVoterQuery || '%'
+                  OR pollingStation LIKE '%' || :decodedVoterQuery || '%'
               ))
               OR (:transliteratedVoterQuery != '' AND (
                   name LIKE '%' || :transliteratedVoterQuery || '%'
                   OR nameHindi LIKE '%' || :transliteratedVoterQuery || '%'
                   OR normalizedName LIKE '%' || :transliteratedVoterQuery || '%'
+                  OR houseNumber LIKE '%' || :transliteratedVoterQuery || '%'
+                  OR address LIKE '%' || :transliteratedVoterQuery || '%'
+                  OR pollingStation LIKE '%' || :transliteratedVoterQuery || '%'
               ))
               OR CAST(serialNumber AS TEXT) = :rawVoterQuery
+              OR (
+                  :token1 != '' AND :token2 != '' AND (
+                      (
+                          name LIKE '%' || :token1 || '%' 
+                          OR nameHindi LIKE '%' || :token1 || '%' 
+                          OR normalizedName LIKE '%' || :token1 || '%'
+                      )
+                      AND
+                      (
+                          houseNumber LIKE '%' || :token2 || '%' 
+                          OR address LIKE '%' || :token2 || '%' 
+                          OR relativeName LIKE '%' || :token2 || '%'
+                      )
+                  )
+              )
+              OR (
+                  :token1 != '' AND :token2 != '' AND (
+                      (
+                          houseNumber LIKE '%' || :token1 || '%' 
+                          OR address LIKE '%' || :token1 || '%'
+                      )
+                      AND
+                      (
+                          name LIKE '%' || :token2 || '%' 
+                          OR nameHindi LIKE '%' || :token2 || '%' 
+                          OR normalizedName LIKE '%' || :token2 || '%'
+                          OR relativeName LIKE '%' || :token2 || '%'
+                      )
+                  )
+              )
           )
           AND (
               :rawRelativeQuery = ''
@@ -91,7 +140,9 @@ interface VoterDao {
                 WHEN :rawVoterQuery != '' AND (name = :rawVoterQuery OR nameHindi = :rawVoterQuery) THEN 3
                 WHEN :rawVoterQuery != '' AND (name LIKE :rawVoterQuery || '%' OR nameHindi LIKE :rawVoterQuery || '%') THEN 4
                 WHEN :rawVoterQuery != '' AND normalizedName LIKE :normalizedVoterQuery || '%' THEN 5
-                ELSE 6
+                WHEN :rawVoterQuery != '' AND (houseNumber = :rawVoterQuery OR houseNumber LIKE :rawVoterQuery || '%') THEN 6
+                WHEN :rawVoterQuery != '' AND address LIKE '%' || :rawVoterQuery || '%' THEN 7
+                ELSE 8
             END,
             serialNumber ASC
         LIMIT :limit
@@ -106,6 +157,8 @@ interface VoterDao {
         decodedRelativeQuery: String = "",
         transliteratedRelativeQuery: String = "",
         booth: String = "",
+        token1: String = "",
+        token2: String = "",
         limit: Int = 150
     ): Flow<List<VoterEntity>>
 

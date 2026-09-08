@@ -153,7 +153,7 @@ fun SearchScreen(
                     onValueChange = { viewModel.onQueryChange(it) },
                     placeholder = {
                         Text(
-                            text = "Search name, EPIC or serial...",
+                            text = "Search name, EPIC, serial or address...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = SecondaryText
                         )
@@ -373,13 +373,13 @@ fun SearchScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (isAdvancedSearch) "Enter voter name and/or relative name" else "Enter a name, EPIC or serial number",
+                        text = if (isAdvancedSearch) "Enter voter name and/or relative name" else "Enter a name, EPIC, serial or address",
                         style = MaterialTheme.typography.bodyMedium,
                         color = SecondaryText
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = if (isAdvancedSearch) "e.g. Voter: Ramesh  |  Relative: Suresh" else "e.g. Ramesh or ABC1234567, or select a booth above",
+                        text = if (isAdvancedSearch) "e.g. Voter: Ramesh  |  Relative: Suresh" else "e.g. Ramesh, ABC1234567, 123, or Jawahar Nagar",
                         style = MaterialTheme.typography.bodySmall,
                         color = SecondaryText.copy(alpha = 0.7f)
                     )
@@ -497,6 +497,22 @@ fun VoterSearchResultRow(
             Text(
                 text = "Booth: ${voter.pollingStation}",
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                color = SecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        val addressLine = listOfNotNull(
+            voter.houseNumber?.let { "H.No: $it" },
+            voter.address
+        ).filter { it.isNotBlank() }.joinToString(", ")
+
+        if (addressLine.isNotBlank()) {
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = addressLine,
+                style = MaterialTheme.typography.bodySmall,
                 color = SecondaryText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

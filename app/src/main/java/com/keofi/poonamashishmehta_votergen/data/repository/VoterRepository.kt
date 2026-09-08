@@ -63,6 +63,10 @@ class VoterRepository(private val voterDao: VoterDao) {
             com.keofi.poonamashishmehta_votergen.util.HindiTransliterationUtil.latinToDevanagari(trimmedRelative).firstOrNull() ?: ""
         } else ""
 
+        val parts = trimmedVoter.split(Regex("\\s+")).filter { it.isNotBlank() }
+        val token1 = if (parts.size >= 2) parts[0] else ""
+        val token2 = if (parts.size >= 2) parts.subList(1, parts.size).joinToString(" ") else ""
+
         return voterDao.searchVotersAdvanced(
             rawVoterQuery = trimmedVoter,
             normalizedVoterQuery = normalizedVoter,
@@ -72,6 +76,8 @@ class VoterRepository(private val voterDao: VoterDao) {
             decodedRelativeQuery = decodedRelative,
             transliteratedRelativeQuery = transliteratedRelative,
             booth = trimmedBooth,
+            token1 = token1,
+            token2 = token2,
             limit = limit
         )
     }
